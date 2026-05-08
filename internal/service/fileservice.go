@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type DataBaseI interface {
@@ -20,7 +19,6 @@ type DataBaseI interface {
 	GetFile(ctx context.Context, id string) (*models.File, error)
 	GetFiles(ctx context.Context) ([]*models.File, error)
 	DeleteFile(ctx context.Context, id string) error
-	CreatePassword(password string) error
 }
 
 type FileService struct {
@@ -94,12 +92,4 @@ func (fs *FileService) DeleteFile(ctx context.Context, id string) error {
 		return err
 	}
 	return fs.db.DeleteFile(ctx, id)
-}
-
-func (fs *FileService) CreatePassword(password string) error {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	return fs.db.CreatePassword(string(bytes))
 }

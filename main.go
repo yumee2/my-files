@@ -30,6 +30,8 @@ func main() {
 	defer dbConn.Close()
 
 	fileService := service.NewFileService(dbConn)
+	authService := service.NewAuthService(dbConn)
+
 	if *setupAuth {
 		password, err := readPassword()
 		if err != nil {
@@ -37,7 +39,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := fileService.CreatePassword(password); err != nil {
+		if err := authService.CreatePassword(password); err != nil {
 			fmt.Printf("Error creating password: %s\n", err)
 			os.Exit(1)
 		}
@@ -46,18 +48,23 @@ func main() {
 		return
 	}
 	fileHandler := server.NewFileHandler(fileService)
+	authHandler := server.NewAuthHandler(authService)
+
+	protectedMux := http.NewServeMux()
+
+	protectedMux.HandleFunc("GET /files", fileHandler.GetFiles)
+	protectedMux.HandleFunc("GET /files/{id}", fileHandler.DownloadFile)
+	protectedMux.HandleFunc("DELETE /files/{id}", fileHandler.DeleteFile)
+	protectedMux.HandleFunc("POST /files", fileHandler.AddFile)
 
 	mux := http.NewServeMux()
-
-	mux.HandleFunc("GET /files", fileHandler.GetFiles)
-	mux.HandleFunc("GET /files/{id}", fileHandler.DownloadFile)
-	mux.HandleFunc("DELETE /files/{id}", fileHandler.DeleteFile)
-	mux.HandleFunc("POST /files", fileHandler.AddFile)
-
+	mux.HandleFunc("POST /login", authHandler.Login)
+	mux.Handle("/", RequireAuth(authService, protectedMux))
 	srv := &http.Server{
 		Addr:    ":8000",
 		Handler: mux,
 	}
+
 	serverErr := make(chan error, 1)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
@@ -113,6 +120,27 @@ func readPassword() (string, error) {
 	}
 
 	return password, nil
+}
+
+type AuthServiceI interface {
+	ValidateSession(ctx context.Context, sessionID string) error
+}
+
+func RequireAuth(authService AuthServiceI, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie("session_id")
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		if err := authService.ValidateSession(r.Context(), cookie.Value); err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // TODO:

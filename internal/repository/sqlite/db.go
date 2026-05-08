@@ -7,6 +7,7 @@ import (
 	"file-uploader/models"
 	"fmt"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -34,7 +35,13 @@ func NewDBConnection() (*Repository, error) {
          	password_hash TEXT NOT NULL,
         	created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
         	updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
-         );
+        );
+
+        CREATE TABLE IF NOT EXISTS sessions (
+        	id         TEXT PRIMARY KEY,
+        	expires_at DATETIME NOT NULL,
+        	created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
     `)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
@@ -106,10 +113,6 @@ func (d *Repository) DeleteFile(ctx context.Context, id string) error {
 	return nil
 }
 
-func (d *Repository) Close() error {
-	return d.db.Close()
-}
-
 func (d *Repository) CreatePassword(password string) error {
 	_, err := d.db.Exec("INSERT INTO auth (id, password_hash) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET password_hash = ?", password, password)
 	if err != nil {
@@ -117,4 +120,37 @@ func (d *Repository) CreatePassword(password string) error {
 	}
 
 	return nil
+}
+
+func (d *Repository) GetPassword(ctx context.Context) (string, error) {
+	var password string
+	err := d.db.QueryRowContext(ctx, "SELECT password_hash FROM auth WHERE id = 1").Scan(&password)
+	if err != nil {
+		return "", fmt.Errorf("failed to get password: %w", err)
+	}
+
+	return password, nil
+}
+
+func (d *Repository) CreateSession(ctx context.Context, id string, expiresAt time.Time) error {
+	_, err := d.db.ExecContext(ctx, "INSERT INTO sessions (id, expires_at) VALUES (?, ?)", id, expiresAt)
+	if err != nil {
+		return fmt.Errorf("failed to create session: %w", err)
+	}
+
+	return nil
+}
+
+func (d *Repository) GetSession(ctx context.Context, id string) (*models.Session, error) {
+	var session models.Session
+	err := d.db.QueryRowContext(ctx, "SELECT id, expires_at, created_at FROM sessions WHERE id = ?", id).Scan(&session.ID, &session.ExpiresAt, &session.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get session: %w", err)
+	}
+
+	return &session, nil
+}
+
+func (d *Repository) Close() error {
+	return d.db.Close()
 }
