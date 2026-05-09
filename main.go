@@ -59,7 +59,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /login", authHandler.Login)
-	mux.Handle("/", RequireAuth(authService, protectedMux))
+	mux.Handle("/", server.RequireAuth(authService, protectedMux))
 	srv := &http.Server{
 		Addr:    ":8000",
 		Handler: mux,
@@ -121,34 +121,3 @@ func readPassword() (string, error) {
 
 	return password, nil
 }
-
-type AuthServiceI interface {
-	ValidateSession(ctx context.Context, sessionID string) error
-}
-
-func RequireAuth(authService AuthServiceI, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("session_id")
-		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		if err := authService.ValidateSession(r.Context(), cookie.Value); err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-// TODO:
-// user authentication
-// 	1. CLI cmd
-// 	2. check if password exists
-// 	3. protect routes
-// do chunking on a client side so i can upload large files
-
-//FIXES:
-// creating files.db

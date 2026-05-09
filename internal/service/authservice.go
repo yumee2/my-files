@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"file-uploader/models"
+	"file-uploader/internal/models"
 	"time"
 
 	"github.com/google/uuid"

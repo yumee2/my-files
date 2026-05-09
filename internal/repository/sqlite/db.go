@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"file-uploader/models"
+	"file-uploader/internal/models"
 	"fmt"
 	"strings"
 	"time"

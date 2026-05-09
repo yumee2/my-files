@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"errors"
+	"file-uploader/internal/models"
 	"file-uploader/internal/service/dto"
 	storage "file-uploader/internal/storage/filesystem"
-	"file-uploader/models"
 	"io"
 	"log"
 	"mime"
