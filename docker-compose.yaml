@@ -1,0 +1,26 @@
+services:
+  server:
+    build:
+      context: ./server
+    ports:
+      - "8000:8000"
+    volumes:
+      - server-data:/app/data
+
+  client:
+    build:
+      context: ./client
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      VITE_API_PROXY_TARGET: http://server:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - client-node-modules:/app/node_modules
+    depends_on:
+      - server
+
+volumes:
+  server-data:
+  client-node-modules:
