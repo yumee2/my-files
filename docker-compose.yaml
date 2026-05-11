@@ -5,7 +5,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - server-data:/app/data
+      - ./server/data:/app/data
 
   client:
     build:
@@ -22,5 +22,4 @@ services:
       - server
 
 volumes:
-  server-data:
   client-node-modules:
