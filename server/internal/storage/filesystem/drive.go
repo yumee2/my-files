@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"file-uploader/internal/config"
 	"fmt"
 	"io"
 	"os"
@@ -11,10 +12,8 @@ import (
 const chunkSizeKB = 500
 const chunkSizeBytes = 500 * 1024
 
-var rootDir, _ = os.Getwd()
-
 func SaveFile(ctx context.Context, uuid string, data io.Reader) (int64, error) {
-	dirPath := filepath.Join(rootDir, "data", "chunks", uuid)
+	dirPath := filepath.Join(config.DataDir(), "chunks", uuid)
 
 	if err := os.MkdirAll(dirPath, 0755); err != nil {
 		return 0, fmt.Errorf("failed to create chunk directory: %w", err)
@@ -51,7 +50,7 @@ func SaveFile(ctx context.Context, uuid string, data io.Reader) (int64, error) {
 }
 
 func WriteFileTo(ctx context.Context, fileUUID string, w io.Writer) error {
-	dirPath := filepath.Join(rootDir, "data", "chunks", fileUUID)
+	dirPath := filepath.Join(config.DataDir(), "chunks", fileUUID)
 	entities, err := os.ReadDir(dirPath)
 	if err != nil {
 		return fmt.Errorf("failed to read chunk directory: %w", err)
@@ -83,6 +82,6 @@ func WriteFileTo(ctx context.Context, fileUUID string, w io.Writer) error {
 }
 
 func DeleteFile(fileUUID string) error {
-	dirPath := filepath.Join(rootDir, "data", "chunks", fileUUID)
+	dirPath := filepath.Join(config.DataDir(), "chunks", fileUUID)
 	return os.RemoveAll(dirPath)
 }

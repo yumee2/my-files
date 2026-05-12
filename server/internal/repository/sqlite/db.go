@@ -4,8 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"file-uploader/internal/config"
 	"file-uploader/internal/models"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,7 +20,13 @@ type Repository struct {
 }
 
 func NewDBConnection() (*Repository, error) {
-	db, err := sql.Open("sqlite", "data/files.db")
+	dataDir := config.DataDir()
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create data directory: %w", err)
+	}
+
+	dbPath := filepath.Join(dataDir, "files.db")
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -83,7 +92,7 @@ func (d *Repository) GetFiles(ctx context.Context) ([]*models.File, error) {
 	}
 	defer rows.Close()
 
-	var files []*models.File
+	files := make([]*models.File, 0)
 	for rows.Next() {
 		var file models.File
 		if err := rows.Scan(&file.ID, &file.OriginalName, &file.Size, &file.MimeType); err != nil {

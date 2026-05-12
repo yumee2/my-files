@@ -2,24 +2,35 @@ services:
   server:
     build:
       context: ./server
-    ports:
-      - "8000:8000"
+    environment:
+      APP_DATA_DIR: /var/lib/my-files
     volumes:
-      - ./server/data:/app/data
+      - file-data:/var/lib/my-files
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  setup-auth:
+    build:
+      context: ./server
+    command: ["./file-uploader", "-setup-auth"]
+    environment:
+      APP_DATA_DIR: /var/lib/my-files
+    volumes:
+      - file-data:/var/lib/my-files
+    stdin_open: true
+    tty: true
+    profiles:
+      - setup
 
   client:
     build:
       context: ./client
-    command: npm run dev -- --host 0.0.0.0
-    environment:
-      VITE_API_PROXY_TARGET: http://server:8000
     ports:
-      - "5173:5173"
-    volumes:
-      - ./client:/app
-      - client-node-modules:/app/node_modules
+      - "5173:80"
     depends_on:
       - server
+    restart: unless-stopped
 
 volumes:
-  client-node-modules:
+  file-data:

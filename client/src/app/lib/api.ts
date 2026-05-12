@@ -42,7 +42,8 @@ export async function login(password: string) {
 
 export async function getFiles(): Promise<StoredFile[]> {
   const response = await request('/files');
-  return response.json();
+  const files = await response.json();
+  return Array.isArray(files) ? files : [];
 }
 
 export async function uploadFile(file: File): Promise<string> {
